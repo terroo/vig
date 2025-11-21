@@ -37,6 +37,8 @@ cd vig
 cmake . -B build
 cmake --build build
 sudo cmake --install build
+cd ..
+rm -rf vig
 ```
 
 ---
