@@ -2,7 +2,7 @@
 Video Image Gallery
 > Create an Image Gallery From a Video
 
-![vig](vig.jpg) 
+![vig](./vig.jpg) 
 
 ---
 
