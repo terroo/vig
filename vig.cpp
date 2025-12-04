@@ -25,47 +25,47 @@ Vig::Vig(const std::filesystem::path& input_path,
     }
   }
 
-  void Vig::draw_text(std::vector<uint8_t>& canvas, int VIG_W, int VIG_H,
-      const std::string& text, int x, int y,
-      float size_px,
-      uint8_t VIG_R, uint8_t VIG_G, uint8_t VIG_B){
+void Vig::draw_text(std::vector<uint8_t>& canvas, int VIG_W, int VIG_H,
+    const std::string& text, int x, int y,
+    float size_px,
+    uint8_t VIG_R, uint8_t VIG_G, uint8_t VIG_B){
 
-    float scale = stbtt_ScaleForPixelHeight(&font, size_px);
+  float scale = stbtt_ScaleForPixelHeight(&font, size_px);
 
-    int ascent, descent, line_gap;
-    stbtt_GetFontVMetrics(&font, &ascent, &descent, &line_gap);
-    int baseline = y + static_cast<int>(std::lround(static_cast<float>(ascent) * scale));
+  int ascent, descent, line_gap;
+  stbtt_GetFontVMetrics(&font, &ascent, &descent, &line_gap);
+  int baseline = y + static_cast<int>(std::lround(static_cast<float>(ascent) * scale));
 
-    int cx = x;
+  int cx = x;
 
-    for(char c : text){
-      int gw, gh, xoff, yoff;
-      unsigned char* bmp = stbtt_GetCodepointBitmap(&font, 0, scale, c, &gw, &gh, &xoff, &yoff);
+  for(char c : text){
+    int gw, gh, xoff, yoff;
+    unsigned char* bmp = stbtt_GetCodepointBitmap(&font, 0, scale, c, &gw, &gh, &xoff, &yoff);
 
-      for(int iy = 0; iy < gh; iy++){
-        for(int ix = 0; ix < gw; ix++){
-          int dst_x = cx + ix + xoff;
-          int dst_y = baseline + iy + yoff;
-          if (dst_x < 0 || dst_x >= VIG_W || dst_y < 0 || dst_y >= VIG_H)
-            continue;
+    for(int iy = 0; iy < gh; iy++){
+      for(int ix = 0; ix < gw; ix++){
+        int dst_x = cx + ix + xoff;
+        int dst_y = baseline + iy + yoff;
+        if (dst_x < 0 || dst_x >= VIG_W || dst_y < 0 || dst_y >= VIG_H)
+          continue;
 
-          uint8_t alpha = bmp[iy * gw + ix];
-          float a = alpha / 255.0f;
+        uint8_t alpha = bmp[iy * gw + ix];
+        float a = alpha / 255.0f;
 
-          size_t idx = static_cast<size_t>((dst_y * VIG_W + dst_x) * 3);
-          canvas[idx + 0] = static_cast<uint8_t>((1 - a) * canvas[idx + 0] + a * VIG_R);
-          canvas[idx + 1] = static_cast<uint8_t>((1 - a) * canvas[idx + 1] + a * VIG_G);
-          canvas[idx + 2] = static_cast<uint8_t>((1 - a) * canvas[idx + 2] + a * VIG_B);
-        }
+        size_t idx = static_cast<size_t>((dst_y * VIG_W + dst_x) * 3);
+        canvas[idx + 0] = static_cast<uint8_t>((1 - a) * canvas[idx + 0] + a * VIG_R);
+        canvas[idx + 1] = static_cast<uint8_t>((1 - a) * canvas[idx + 1] + a * VIG_G);
+        canvas[idx + 2] = static_cast<uint8_t>((1 - a) * canvas[idx + 2] + a * VIG_B);
       }
-
-      int adv, lsb;
-      stbtt_GetCodepointHMetrics(&font, c, &adv, &lsb);
-      cx += static_cast<int>(std::lround(static_cast<float>(adv) * scale));
-
-      stbtt_FreeBitmap(bmp, nullptr);
     }
+
+    int adv, lsb;
+    stbtt_GetCodepointHMetrics(&font, c, &adv, &lsb);
+    cx += static_cast<int>(std::lround(static_cast<float>(adv) * scale));
+
+    stbtt_FreeBitmap(bmp, nullptr);
   }
+}
 
 void Vig::save_jpg(uint8_t* rgb, int w, int h, const std::string& path){
   stbi_write_jpg(path.c_str(), w, h, 3, rgb, 90);
@@ -80,7 +80,6 @@ void Vig::run(){
   const fs::path dir = "/tmp/frames-vig";
   fs::remove_all(dir);
   fs::create_directories(dir);
-
 
   stbtt_InitFont(&font, data.data(), stbtt_GetFontOffsetForIndex(data.data(), 0));
 
@@ -166,8 +165,16 @@ void Vig::run(){
 
           sws_scale(sws, frame->data, frame->linesize, 0, frame->height, rgb->data, rgb->linesize);
 
+          // CORREÇÃO: Copiar os dados considerando o linesize
+          std::vector<uint8_t> rgb_buffer(frame->width * frame->height * 3);
+          for(int y = 0; y < frame->height; y++){
+            memcpy(&rgb_buffer[y * frame->width * 3], 
+                &rgb->data[0][y * rgb->linesize[0]], 
+                frame->width * 3);
+          }
+
           std::string name = dir.string() + "/frame_" + std::to_string(index) + ".jpg";
-          save_jpg(rgb->data[0], rgb->width, rgb->height, name);
+          save_jpg(rgb_buffer.data(), frame->width, frame->height, name);
 
           av_frame_free(&rgb);
           ++index;
