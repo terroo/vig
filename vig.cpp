@@ -251,6 +251,7 @@ void Vig::run(){
   }
 
   std::array<char, 256> header;
+  fs::path video(input);
 
   if(VIG_COLS <= 2){
     snprintf(header.data(), sizeof(header),
@@ -258,8 +259,8 @@ void Vig::run(){
         video_w, video_h, VIG_HH, VIG_MM, VIG_SS);
   }else{
     snprintf(header.data(), sizeof(header),
-        "  %s   |   %dx%d   |   %02d:%02d:%02d",
-        input.c_str(), video_w, video_h, VIG_HH, VIG_MM, VIG_SS);
+        "  %s  |   %dx%d   |   %02d:%02d:%02d",
+        video.filename().string().c_str(), video_w, video_h, VIG_HH, VIG_MM, VIG_SS);
   }
 
   draw_text(canvas, VIG_W, VIG_H,
@@ -269,7 +270,6 @@ void Vig::run(){
       VIG_HEADER_FONT_SIZE,
       VIG_HEADER_COLOR_R, VIG_HEADER_COLOR_G, VIG_HEADER_COLOR_B);
 
-  fs::path video(input);
   const std::string output = "gallery-" + datetime() + "-" + video.stem().string() + ".jpg";
   save_jpg(canvas.data(), VIG_W, VIG_H, output);
 
